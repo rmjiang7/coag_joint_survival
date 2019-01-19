@@ -67,8 +67,13 @@ coag_long <-
   separate(protein, c("nominal_hour", "protein"), sep = "_") %>%
   spread(protein, value) %>%
   inner_join(blood_draw_times) %>%
-  select(acitnum, age, male, iss, hours_since_arrival = actual_hour, factorii, ddimer)
-
+  select(acitnum, age, male, iss, hours_since_arrival = actual_hour, factorii, ddimer) %>%
+  mutate_at(vars(age, iss), as.double) %>%
+  na.omit %>%
+  filter(hours_since_arrival >= 0.0) %>%
+  filter(hours_since_arrival <= 168) %>%
+  mutate(acitnum = factor(acitnum))
+  
 # only consider first week of deaths else the patient is censored as per the famous
 # "trimodal" death time: search google images for "trauma distribution of death times"
 coag_surv <-
@@ -77,4 +82,7 @@ coag_surv <-
   mutate(died = !is.na(death_time_hours)) %>%
   mutate(died_first_week = died & (death_time_hours < 7*24)) %>%
   mutate(death_time_hours = ifelse(died_first_week, death_time_hours, 7*24)) %>%
-  select(-died)
+  select(-died) %>%
+  mutate_at(vars(age, iss), as.double) %>%
+  filter(acitnum %in% unique(coag_long$acitnum)) %>%
+  mutate(acitnum = factor(acitnum))
